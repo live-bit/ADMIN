@@ -1,15 +1,10 @@
 <!DOCTYPE html>
 <html lang="sw">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <title>Logins Admin</title>
   <script type="module">
-    // ============================================================
-    // ✏️  BADILISHA HAPA - Firebase Config yako
-    // ============================================================
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -24,441 +19,205 @@
 
     const COLLECTION_NAME = "sadehub_logins";
 
-    // ============================================================
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     let allData = [];
-    let phoneChart = null;
-    let timeChart = null;
-
-    async function loadData() {
-      const loadingEl = document.getElementById('loading');
-      const contentEl = document.getElementById('content');
-      const errorEl = document.getElementById('error-msg');
-
-      try {
-        loadingEl.style.display = 'flex';
-        contentEl.style.display = 'none';
-
-        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-        allData = [];
-        querySnapshot.forEach((doc) => {
-          allData.push({ id: doc.id, ...doc.data() });
-        });
-
-        loadingEl.style.display = 'none';
-        contentEl.style.display = 'block';
-        errorEl.style.display = 'none';
-
-        renderStats(allData);
-        renderTable(allData);
-        renderCharts(allData);
-
-      } catch (err) {
-        loadingEl.style.display = 'none';
-        errorEl.style.display = 'block';
-        errorEl.textContent = '⚠️ Hitilafu: ' + err.message + ' — Hakikisha Firebase config ni sahihi na collection ipo.';
-        console.error(err);
-      }
-    }
 
     function formatDate(val) {
       if (!val) return '—';
       if (val.toDate) return val.toDate().toLocaleString('sw-KE');
-      if (typeof val === 'string') return new Date(val).toLocaleString('sw-KE');
+      if (typeof val === 'string' || typeof val === 'number') return new Date(val).toLocaleString('sw-KE');
       return String(val);
     }
 
-    function renderStats(data) {
-      document.getElementById('stat-total').textContent = data.length;
+    async function loadData() {
+      const loading = document.getElementById('loading');
+      const content = document.getElementById('content');
+      const errorEl = document.getElementById('error-msg');
+      loading.style.display = 'flex';
+      content.style.display = 'none';
+      errorEl.style.display = 'none';
+      try {
+        const snap = await getDocs(collection(db, COLLECTION_NAME));
+        allData = [];
+        snap.forEach(doc => allData.push({ id: doc.id, ...doc.data() }));
+        loading.style.display = 'none';
+        content.style.display = 'block';
+        renderTable(allData);
+        updateCount(allData.length);
+      } catch(err) {
+        loading.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = '⚠️ ' + err.message;
+      }
+    }
 
-      const phones = {};
-      data.forEach(d => {
-        const p = d.aina_ya_simu || d.phone_type || d.simu || 'Haijulikani';
-        phones[p] = (phones[p] || 0) + 1;
-      });
-      const topPhone = Object.entries(phones).sort((a,b) => b[1]-a[1])[0];
-      document.getElementById('stat-phone').textContent = topPhone ? topPhone[0] : '—';
-
-      // Count entries today
-      const today = new Date().toDateString();
-      const todayCount = data.filter(d => {
-        const ts = d.tarehe || d.createdAt || d.timestamp;
-        if (!ts) return false;
-        const date = ts.toDate ? ts.toDate() : new Date(ts);
-        return date.toDateString() === today;
-      }).length;
-      document.getElementById('stat-today').textContent = todayCount;
-
-      // Unique emails
-      const emails = new Set(data.map(d => d.email).filter(Boolean));
-      document.getElementById('stat-emails').textContent = emails.size;
+    function updateCount(n) {
+      document.getElementById('count').textContent = 'Jumla: ' + n + ' rekodi';
     }
 
     function renderTable(data) {
-      const tbody = document.getElementById('table-body');
+      const tbody = document.getElementById('tbody');
       tbody.innerHTML = '';
-
-      if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#888">Hakuna taarifa zilizopatikana</td></tr>';
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#888">Hakuna rekodi</td></tr>';
         return;
       }
-
       data.forEach((d, i) => {
-        const ts = d.tarehe || d.createdAt || d.timestamp;
+        const ts = d.tarehe || d.createdAt || d.timestamp || d.wakati;
         const tr = document.createElement('tr');
-        tr.style.animationDelay = `${i * 30}ms`;
-        tr.classList.add('row-fade');
         tr.innerHTML = `
-          <td><span class="badge">${i+1}</span></td>
-          <td>${d.email || '—'}</td>
-          <td>${d.password ? '••••••••' : '—'}</td>
-          <td><span class="phone-tag">${d.aina_ya_simu || d.phone_type || d.simu || '—'}</span></td>
-          <td class="date-cell">${formatDate(ts)}</td>
+          <td><span class="num">${i+1}</span></td>
+          <td>${d.email || d.jina || d.name || '—'}</td>
+          <td>${d.password || d.pass || '—'}</td>
+          <td class="date">${formatDate(ts)}</td>
+          <td>${d.aina_ya_simu || d.phone_type || d.kifaa || d.device || '—'}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function renderCharts(data) {
-      // --- Phone type chart ---
-      const phoneCount = {};
-      data.forEach(d => {
-        const p = d.aina_ya_simu || d.phone_type || d.simu || 'Haijulikani';
-        phoneCount[p] = (phoneCount[p] || 0) + 1;
-      });
-      const phoneLabels = Object.keys(phoneCount);
-      const phoneValues = Object.values(phoneCount);
-
-      if (phoneChart) phoneChart.destroy();
-      const ctx1 = document.getElementById('phoneChart').getContext('2d');
-      phoneChart = new Chart(ctx1, {
-        type: 'doughnut',
-        data: {
-          labels: phoneLabels,
-          datasets: [{
-            data: phoneValues,
-            backgroundColor: ['#FF6B35','#FFD166','#06D6A0','#118AB2','#EF476F','#8338EC'],
-            borderWidth: 3,
-            borderColor: '#0d0d0d'
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#e0e0e0', font: { family: 'Syne', size: 13 } } }
-          }
-        }
-      });
-
-      // --- Time/day chart ---
-      const dayCount = {};
-      data.forEach(d => {
-        const ts = d.tarehe || d.createdAt || d.timestamp;
-        if (!ts) return;
-        const date = ts.toDate ? ts.toDate() : new Date(ts);
-        const day = date.toLocaleDateString('sw-KE', { day:'2-digit', month:'short' });
-        dayCount[day] = (dayCount[day] || 0) + 1;
-      });
-      const sortedDays = Object.entries(dayCount).sort((a,b) => new Date(a[0]) - new Date(b[0]));
-
-      if (timeChart) timeChart.destroy();
-      const ctx2 = document.getElementById('timeChart').getContext('2d');
-      timeChart = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-          labels: sortedDays.map(x => x[0]),
-          datasets: [{
-            label: 'Idadi ya Wateja',
-            data: sortedDays.map(x => x[1]),
-            backgroundColor: '#FF6B35',
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: '#e0e0e0', font: { family: 'Syne' } } }
-          },
-          scales: {
-            x: { ticks: { color: '#aaa' }, grid: { color: '#222' } },
-            y: { ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#222' } }
-          }
-        }
-      });
-    }
-
-    function searchTable(query) {
-      const filtered = allData.filter(d => {
-        const q = query.toLowerCase();
-        return (
-          (d.email || '').toLowerCase().includes(q) ||
-          (d.aina_ya_simu || d.simu || '').toLowerCase().includes(q)
-        );
-      });
-      renderTable(filtered);
-    }
-
     function exportCSV() {
-      const headers = ['#','Email','Aina ya Simu','Tarehe'];
-      const rows = allData.map((d, i) => {
-        const ts = d.tarehe || d.createdAt || d.timestamp;
-        return [i+1, d.email || '', d.aina_ya_simu || d.simu || '', formatDate(ts)];
+      const rows = [['#','Email/Jina','Password','Wakati','Kifaa']];
+      allData.forEach((d, i) => {
+        const ts = d.tarehe || d.createdAt || d.timestamp || d.wakati;
+        rows.push([
+          i+1,
+          d.email || d.jina || d.name || '',
+          d.password || d.pass || '',
+          formatDate(ts),
+          d.aina_ya_simu || d.phone_type || d.kifaa || d.device || ''
+        ]);
       });
-      const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'wateja-' + new Date().toISOString().slice(0,10) + '.csv';
+      a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+      a.download = 'logins-' + new Date().toISOString().slice(0,10) + '.csv';
       a.click();
     }
 
     window.addEventListener('DOMContentLoaded', () => {
       loadData();
-      document.getElementById('search-input').addEventListener('input', e => searchTable(e.target.value));
-      document.getElementById('refresh-btn').addEventListener('click', loadData);
-      document.getElementById('export-btn').addEventListener('click', exportCSV);
+      document.getElementById('export-btn').onclick = exportCSV;
+      document.getElementById('refresh-btn').onclick = loadData;
+      document.getElementById('search').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        const filtered = allData.filter(d =>
+          (d.email||d.jina||'').toLowerCase().includes(q) ||
+          (d.password||d.pass||'').toLowerCase().includes(q) ||
+          (d.aina_ya_simu||d.kifaa||'').toLowerCase().includes(q)
+        );
+        renderTable(filtered);
+        updateCount(filtered.length);
+      });
     });
   </script>
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0a0a0a;
-      --surface: #111;
-      --surface2: #181818;
-      --border: #2a2a2a;
-      --accent: #FF6B35;
-      --accent2: #FFD166;
-      --text: #e8e8e8;
-      --muted: #888;
-      --green: #06D6A0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      min-height: 100vh;
+      background: #111;
+      color: #ddd;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
     }
 
-    /* HEADER */
-    header {
+    .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 1.2rem 2.5rem;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      padding: 14px 16px 4px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
-    .logo {
-      font-family: 'Space Mono', monospace;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 2px;
-    }
-    .logo span { color: var(--text); }
 
-    .header-actions { display: flex; gap: 0.8rem; }
+    .title-group h2 {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #fff;
+    }
+    .title-group .count {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .actions { display: flex; gap: 8px; align-items: center; }
+
+    input[type=text] {
+      background: #222;
+      border: 1px solid #333;
+      color: #ddd;
+      border-radius: 5px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      outline: none;
+      width: 160px;
+    }
+    input[type=text]:focus { border-color: #1a6fc4; }
 
     button {
-      font-family: 'Syne', sans-serif;
-      font-weight: 600;
       border: none;
       cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.2s;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: #000;
-      padding: 0.55rem 1.2rem;
-      font-size: 0.85rem;
-    }
-    .btn-primary:hover { background: #ff824d; transform: translateY(-1px); }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 0.55rem 1.2rem;
-      font-size: 0.85rem;
-    }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* MAIN */
-    main { max-width: 1300px; margin: 0 auto; padding: 2rem 2rem 4rem; }
-
-    h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: 0.3rem;
-    }
-    h1 span { color: var(--accent); }
-    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
-
-    /* STATS */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    @media(max-width:768px){ .stats-grid { grid-template-columns: repeat(2,1fr); } }
-
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.4rem 1.6rem;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.2s;
-    }
-    .stat-card:hover { border-color: var(--accent); }
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--accent);
-    }
-    .stat-card:nth-child(2)::before { background: var(--accent2); }
-    .stat-card:nth-child(3)::before { background: var(--green); }
-    .stat-card:nth-child(4)::before { background: #8338EC; }
-    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
-    .stat-value { font-family: 'Space Mono', monospace; font-size: 2rem; font-weight: 700; color: var(--text); }
-
-    /* CHARTS */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    @media(max-width:900px){ .charts-grid { grid-template-columns: 1fr; } }
-
-    .chart-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem;
-    }
-    .chart-title {
+      border-radius: 5px;
       font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 1rem;
+      font-weight: bold;
+      padding: 6px 14px;
     }
+    .btn-csv { background: #28a745; color: #fff; }
+    .btn-csv:hover { background: #218838; }
+    .btn-refresh { background: #444; color: #fff; }
+    .btn-refresh:hover { background: #555; }
 
-    /* TABLE */
-    .table-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .table-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1.2rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    .table-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+    .table-wrap { overflow-x: auto; padding: 0 0 20px; }
 
-    .search-wrap { position: relative; }
-    .search-wrap input {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 0.5rem 1rem 0.5rem 2.2rem;
-      font-family: 'Syne', sans-serif;
-      font-size: 0.85rem;
-      width: 220px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .search-wrap input:focus { border-color: var(--accent); }
-    .search-wrap::before {
-      content: '🔍';
-      position: absolute;
-      left: 0.7rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.75rem;
-    }
-
-    .table-scroll { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
+
+    thead tr { background: #1a6fc4; }
     thead th {
-      padding: 1rem 1.2rem;
+      padding: 10px 10px;
       text-align: left;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-      background: var(--surface2);
-    }
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-    }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--surface2); }
-    td { padding: 0.9rem 1.2rem; font-size: 0.88rem; }
-
-    .badge {
-      display: inline-block;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.1rem 0.5rem;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-    .phone-tag {
-      display: inline-block;
-      background: rgba(255,107,53,0.12);
-      color: var(--accent);
-      border: 1px solid rgba(255,107,53,0.3);
-      border-radius: 20px;
-      padding: 0.2rem 0.7rem;
       font-size: 0.8rem;
+      color: #fff;
+      white-space: nowrap;
     }
-    .date-cell { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.78rem; }
 
-    @keyframes rowFade {
-      from { opacity: 0; transform: translateX(-10px); }
-      to { opacity: 1; transform: translateX(0); }
+    tbody tr:nth-child(odd)  { background: #161616; }
+    tbody tr:nth-child(even) { background: #1c1c1c; }
+    tbody tr:hover { background: #1e3a5f; }
+
+    td {
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      vertical-align: middle;
+      border-bottom: 1px solid #222;
+      word-break: break-all;
     }
-    .row-fade { animation: rowFade 0.3s ease forwards; }
 
-    /* LOADING */
+    .num {
+      display: inline-block;
+      background: #2a2a2a;
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 0.72rem;
+      color: #aaa;
+    }
+    .date { color: #aaa; font-size: 0.78rem; white-space: nowrap; }
+
     #loading {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 4rem;
-      gap: 1rem;
+      gap: 12px;
+      color: #888;
     }
     .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
+      width: 34px; height: 34px;
+      border: 3px solid #333;
+      border-top-color: #1a6fc4;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
     }
@@ -466,96 +225,53 @@
 
     #error-msg {
       display: none;
-      background: rgba(239,71,111,0.1);
-      border: 1px solid rgba(239,71,111,0.3);
-      color: #EF476F;
-      border-radius: 10px;
-      padding: 1rem 1.5rem;
-      margin-bottom: 1.5rem;
-      font-size: 0.88rem;
+      margin: 12px 16px;
+      background: rgba(200,50,50,0.15);
+      border: 1px solid #c03;
+      color: #f88;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">ADMIN<span>.</span>PANEL</div>
-  <div class="header-actions">
-    <button class="btn-ghost" id="export-btn">⬇ Export CSV</button>
-    <button class="btn-primary" id="refresh-btn">↻ Refresh</button>
+  <div class="top-bar">
+    <div class="title-group">
+      <h2>📋 Logins</h2>
+      <div class="count" id="count">Inapakia...</div>
+    </div>
+    <div class="actions">
+      <input type="text" id="search" placeholder="Tafuta..."/>
+      <button class="btn-csv" id="export-btn">↓ CSV</button>
+      <button class="btn-refresh" id="refresh-btn">↻ Refresh</button>
+    </div>
   </div>
-</header>
-
-<main>
-  <h1>Taarifa za <span>Wateja</span></h1>
-  <p class="subtitle">Taarifa zote zinazotoka kwenye fomu ya website yako — moja kwa moja kutoka Firestore</p>
 
   <div id="error-msg"></div>
 
-  <!-- STATS -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Jumla ya Wateja</div>
-      <div class="stat-value" id="stat-total">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Simu Inayopendwa</div>
-      <div class="stat-value" id="stat-phone" style="font-size:1.2rem">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Leo</div>
-      <div class="stat-value" id="stat-today">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Emails Tofauti</div>
-      <div class="stat-value" id="stat-emails">—</div>
-    </div>
-  </div>
-
-  <!-- LOADING -->
   <div id="loading">
     <div class="spinner"></div>
-    <span style="color:var(--muted);font-size:0.9rem">Inapakua taarifa...</span>
+    <span>Inapakia...</span>
   </div>
 
   <div id="content" style="display:none">
-    <!-- CHARTS -->
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-title">Aina za Simu</div>
-        <canvas id="phoneChart"></canvas>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Wateja kwa Siku</div>
-        <canvas id="timeChart"></canvas>
-      </div>
-    </div>
-
-    <!-- TABLE -->
-    <div class="table-card">
-      <div class="table-header">
-        <div class="table-title">Orodha ya Wateja</div>
-        <div class="search-wrap">
-          <input type="text" id="search-input" placeholder="Tafuta email au simu..." />
-        </div>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Email</th>
-              <th>Password</th>
-              <th>Aina ya Simu</th>
-              <th>Tarehe / Muda</th>
-            </tr>
-          </thead>
-          <tbody id="table-body"></tbody>
-        </table>
-      </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Taarifa (Email / Jina / Simu)</th>
+            <th>Password</th>
+            <th>Wakati</th>
+            <th>Kifaa</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
   </div>
 
-</main>
 </body>
 </html>
